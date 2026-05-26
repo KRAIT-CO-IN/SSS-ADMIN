@@ -119,7 +119,7 @@ function ProductsPage({ products, onNav, onDelete }) {
               <td className="num">{afmt(p.price)}</td>
               <td className="num text-red">{p.disc ? afmt(p.disc) : "—"}</td>
               <td className="num">{p.stock}</td>
-              <td><span className="apill apill--success">{p.status}</span></td>
+              <td><span className={`apill ${p.status === "Draft" ? "apill--neutral no-dot" : p.status === "Out of Stock" ? "apill--warn" : "apill--success"}`}>{p.status}</span></td>
               <td>
                 <div className="atable-actions">
                   <button aria-label="Edit" onClick={() => onNav("product-edit", p.pid)}><AIcon name="edit" size={16} /></button>
@@ -131,13 +131,7 @@ function ProductsPage({ products, onNav, onDelete }) {
         </tbody>
       </table>
       <div className="atable-foot">
-        <span>Showing <b>1–{products.length}</b> of <b>124</b></span>
-        <div className="apager">
-          <button disabled aria-label="Previous"><AIcon name="chev-l" size={14} /></button>
-          <button className={page === 1 ? "is-active" : ""} onClick={() => setPage(1)}>1</button>
-          <button className={page === 2 ? "is-active" : ""} onClick={() => setPage(2)}>2</button>
-          <button aria-label="Next" onClick={() => setPage(2)}><AIcon name="chev-r" size={14} /></button>
-        </div>
+        <span>Showing <b>{products.length === 0 ? 0 : 1}–{products.length}</b> of <b>{products.length}</b></span>
       </div>
     </div>
   );
