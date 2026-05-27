@@ -36,7 +36,7 @@ function adaptAdminCategory(c) {
   };
 }
 
-const HEALTH_TAGS_ALL = ["No Preservatives", "Vegan", "Gluten Free", "Organic", "Spicy", "Hand-packed"];
+const HEALTH_TAGS_ALL = ["No Preservatives", "Vegan", "Gluten Free", "Organic", "Spicy", "Hand-packed", "Coming Soon"];
 
 const NOTIF_LOG = [
   { dt: "07 May 2025 02:35", event: "New Order — ORD-1189", channel: "Email", status: "Sent" },
