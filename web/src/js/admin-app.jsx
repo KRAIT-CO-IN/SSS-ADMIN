@@ -67,6 +67,7 @@ function AdminApp() {
       customerPhone: o.customerPhone, customerName: o.customerName,
       address: o.address, city: o.city, state: o.state,
       amount: o.total, payment: o.payment, status: o.status,
+      razorpayPaymentId: o.razorpayPaymentId, razorpayOrderId: o.razorpayOrderId,
       items: o.items, subtotal: o.subtotal, shipping: o.shipping, gst: o.gst, total: o.total,
     }));
     setTxns(adapted);

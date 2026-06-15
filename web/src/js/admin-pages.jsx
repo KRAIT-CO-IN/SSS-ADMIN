@@ -773,8 +773,14 @@ function TransactionModal({ txn, onClose }) {
           </div>
           <div>
             <div className="lbl mono" style={{ fontSize: 11, letterSpacing: "1.6px", color: "var(--ac-muted-2)" }}>PAYMENT METHOD</div>
-            <div>{txn.payment} via Razorpay</div>
+            <div>{txn.payment === "COD" ? "Cash on Delivery" : (txn.payment || "—")}</div>
           </div>
+          {txn.razorpayPaymentId && (
+            <div>
+              <div className="lbl mono" style={{ fontSize: 11, letterSpacing: "1.6px", color: "var(--ac-muted-2)" }}>RAZORPAY PAYMENT ID</div>
+              <div className="mono">{txn.razorpayPaymentId}</div>
+            </div>
+          )}
         </div>
 
         <div style={{ borderTop: "1px solid var(--ac-line)", paddingTop: 14, marginBottom: 14 }}>
@@ -998,7 +1004,8 @@ function SettingsStore({ toast }) {
     address: "123 Heritage Lane, Old Fort Area, Hyderabad, Telangana 500001",
   });
   const [ship, setShip] = React.useState({ free: 499, rate: 80, eta: "2-4 Business Days", cod: true });
-  const [magic, setMagic] = React.useState({ otpExpiry: 30, otpLen: 4, autofill: true, razKey: "rzp_live_XXXX...XXXX", reveal: false });
+  const [magic, setMagic] = React.useState({ otpExpiry: 30, otpLen: 4, autofill: true, reveal: false });
+  const [gw, setGw] = React.useState({ keyId: "", enabled: false, mode: "unset" });
 
   const seti = (k, v) => setInfo((p) => ({ ...p, [k]: v }));
   const sets = (k, v) => setShip((p) => ({ ...p, [k]: v }));
@@ -1008,6 +1015,7 @@ function SettingsStore({ toast }) {
     window.API.settings.get("store").then((r) => r.value && setInfo((p) => ({ ...p, ...r.value }))).catch(() => {});
     window.API.settings.get("shipping").then((r) => r.value && setShip((p) => ({ ...p, ...r.value }))).catch(() => {});
     window.API.settings.get("checkout").then((r) => r.value && setMagic((p) => ({ ...p, ...r.value }))).catch(() => {});
+    window.API.payments.config().then((c) => c && setGw(c)).catch(() => {});
   }, []);
 
   const saveStore = async () => {
@@ -1022,7 +1030,12 @@ function SettingsStore({ toast }) {
     try { await window.API.settings.update("checkout", magic); toast && toast("Checkout saved"); }
     catch (e) { toast && toast("Save failed: " + e.message); }
   };
-  const testConn = () => toast && toast("Razorpay connection OK");
+  const testConn = () => {
+    if (!toast) return;
+    if (gw.enabled) toast(`Razorpay connected (${gw.mode} mode) — ${gw.keyId}`);
+    else toast("Razorpay NOT configured — set RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars");
+  };
+  const maskKey = (k) => (k ? k.slice(0, 8) + "••••" + k.slice(-4) : "Not configured");
 
   return (
     <React.Fragment>
@@ -1089,7 +1102,7 @@ function SettingsStore({ toast }) {
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
             <AIcon name="bolt" size={18} /> Magic Checkout Settings
           </h2>
-          <span className="aconn">Connected</span>
+          <span className="aconn">{gw.enabled ? `Razorpay ${gw.mode}` : "Not configured"}</span>
         </div>
         <div className="afield-row cols-2">
           <div className="afield">
@@ -1116,9 +1129,9 @@ function SettingsStore({ toast }) {
           <AdmToggle checked={magic.autofill} onChange={(v) => setm("autofill", v)} />
         </div>
         <div className="afield" style={{ marginTop: 14 }}>
-          <label className="afield-label">Razorpay Key ID</label>
+          <label className="afield-label">Razorpay Key ID <span className="text-muted" style={{ fontWeight: 400 }}>(read-only — set via RAZORPAY_KEY_ID env var)</span></label>
           <div className="adm-row" style={{ gap: 8 }}>
-            <input className="ainput ainput-mono" value={magic.reveal ? "rzp_live_AbCdEfGhIjKl" : magic.razKey} readOnly />
+            <input className="ainput ainput-mono" value={magic.reveal ? (gw.keyId || "Not configured") : maskKey(gw.keyId)} readOnly />
             <button className="alink" onClick={() => setm("reveal", !magic.reveal)}>{magic.reveal ? "Hide" : "Reveal"}</button>
           </div>
         </div>
