@@ -137,33 +137,84 @@ function ProductsPage({ products, onNav, onDelete }) {
   );
 }
 
+// Parse a weight/size label to grams. null if not a recognizable weight.
+function gramsOf(w) {
+  const m = String(w || "").trim().match(/^([\d.]+)\s*(kg|gms?|g|grams?)?$/i);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  if (!isFinite(n)) return null;
+  return /^k/i.test(m[2] || "g") ? n * 1000 : n;
+}
+
+// Suggested variant price scaled from base price per base weight. null if not computable.
+function autoVariantPrice(baseWeight, basePrice, w) {
+  const bg = gramsOf(baseWeight), vg = gramsOf(w), bp = parseFloat(basePrice);
+  if (!bg || !vg || !isFinite(bp)) return null;
+  return Math.round((bp / bg) * vg);
+}
+
 // ─────────────────────────────────────────────
 // Product Form (Add / Edit shared)
 // ─────────────────────────────────────────────
 function ProductForm({ mode, product, onSave, onDelete, onBack }) {
   const isEdit = mode === "edit";
-  const [form, setForm] = React.useState(() => product || {
-    pid: "PRD-0043", name: "", catId: "CAT-002", category: "",
-    shortDesc: "", fullDesc: "", price: "", disc: "", discountLabel: "",
-    stock: 100, lowAlert: 10, status: "Published", visible: true,
-    tags: ["No Preservatives", "Vegan"],
-    variants: [
-      { w: "100g", price: "", stock: 0 },
-      { w: "250g", price: "", stock: 0 },
-    ],
-    img: null,
+  const [form, setForm] = React.useState(() => {
+    const base = product || {
+      pid: "PRD-0043", name: "", catId: "CAT-002", category: "",
+      shortDesc: "", fullDesc: "", price: "", disc: "", discountLabel: "",
+      stock: 100, lowAlert: 10, status: "Published", visible: true,
+      tags: ["No Preservatives", "Vegan"],
+      variants: [
+        { w: "100g", price: "", disc: "" },
+        { w: "250g", price: "", disc: "" },
+      ],
+      img: null,
+    };
+    // A loaded variant with an existing price is treated as manually-set
+    // so editing the base price won't silently overwrite it.
+    return {
+      baseWeight: base.baseWeight || "100g",
+      ...base,
+      variants: (base.variants || []).map((v) => ({
+        ...v, manual: v.manual ?? (v.price !== "" && v.price != null),
+      })),
+    };
   });
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  // Re-derive a variant's price + disc from the base figures. null parts left untouched.
+  const deriveVariant = (f, vr) => {
+    const price = autoVariantPrice(f.baseWeight, f.price, vr.w);
+    const disc = autoVariantPrice(f.baseWeight, f.disc, vr.w);
+    return {
+      ...vr,
+      price: price == null ? vr.price : String(price),
+      disc: disc == null ? "" : String(disc),
+    };
+  };
+  // Changing base price/disc/weight re-derives every non-manual variant.
+  const setBase = (k, v) => setForm((f) => {
+    const next = { ...f, [k]: v };
+    next.variants = next.variants.map((vr) => (vr.manual ? vr : deriveVariant(next, vr)));
+    return next;
+  });
+  const revertAuto = (i) => setForm((f) => {
+    const arr = [...f.variants];
+    arr[i] = deriveVariant(f, { ...arr[i], manual: false });
+    return { ...f, variants: arr };
+  });
   const toggleTag = (t) => {
     setForm((f) => ({ ...f, tags: f.tags.includes(t) ? f.tags.filter((x) => x !== t) : [...f.tags, t] }));
   };
-  const setVariant = (i, k, v) => {
-    const arr = [...form.variants];
-    arr[i] = { ...arr[i], [k]: v };
-    set("variants", arr);
-  };
-  const addVariant = () => set("variants", [...form.variants, { w: "", price: "", stock: 0 }]);
+  const setVariant = (i, k, v) => setForm((f) => {
+    let vr = { ...f.variants[i], [k]: v };
+    if (k === "price" || k === "disc") vr.manual = true;  // hand-priced → keep both numbers
+    if (k === "w" && !vr.manual) vr = deriveVariant(f, vr); // weight changed → re-derive
+    const arr = [...f.variants];
+    arr[i] = vr;
+    return { ...f, variants: arr };
+  });
+  const addVariant = () => set("variants", [...form.variants, { w: "", price: "", disc: "" }]);
   const removeVariant = (i) => set("variants", form.variants.filter((_, idx) => idx !== i));
 
   return (
@@ -230,16 +281,22 @@ function ProductForm({ mode, product, onSave, onDelete, onBack }) {
         {/* Pricing */}
         <div className="adm-card">
           <h2 className="adm-card-title">Pricing &amp; Inventory</h2>
-          <div className="afield-row cols-2">
+          <div className="afield-row cols-3">
             <div className="afield">
-              <label className="afield-label">Regular Price (₹)</label>
-              <input className="ainput" placeholder="₹ 0.00" value={form.price}
-                     onChange={(e) => set("price", e.target.value)} />
+              <label className="afield-label">Base Weight / Size</label>
+              <input className="ainput" placeholder="100g" value={form.baseWeight}
+                     onChange={(e) => setBase("baseWeight", e.target.value)} />
+              <span className="afield-hint">Prices below are for this quantity</span>
             </div>
             <div className="afield">
-              <label className="afield-label">Discounted Price (₹)</label>
+              <label className="afield-label">Regular Price{form.baseWeight ? ` (₹ / ${form.baseWeight})` : " (₹)"}</label>
+              <input className="ainput" placeholder="₹ 0.00" value={form.price}
+                     onChange={(e) => setBase("price", e.target.value)} />
+            </div>
+            <div className="afield">
+              <label className="afield-label">Discounted Price{form.baseWeight ? ` (₹ / ${form.baseWeight})` : " (₹)"}</label>
               <input className="ainput" placeholder="₹ 0.00" value={form.disc || ""}
-                     onChange={(e) => set("disc", e.target.value)} />
+                     onChange={(e) => setBase("disc", e.target.value)} />
               <span className="afield-hint">Optional</span>
             </div>
           </div>
@@ -269,19 +326,37 @@ function ProductForm({ mode, product, onSave, onDelete, onBack }) {
         {/* Variants */}
         <div className="adm-card">
           <h2 className="adm-card-title">Weight / Size Variants</h2>
-          {form.variants.map((v, i) => (
+          <p className="afield-hint" style={{ marginBottom: 12 }}>
+            Prices auto-scale from the base price &amp; discount above. Type a price to override; the override sticks.
+            Stock is tracked per product under Pricing &amp; Inventory.
+          </p>
+          {/* ponytail: inventory is one number per product (Stock Quantity above).
+              Per-variant stock would need order-items to decrement the matching variant. */}
+          <div className="avariant-row avariant-head">
+            <span>Weight / Size</span><span>Price (₹)</span><span>Discounted (₹)</span><span />
+          </div>
+          {form.variants.map((v, i) => {
+            const auto = autoVariantPrice(form.baseWeight, form.price, v.w);
+            return (
             <div className="avariant-row" key={i}>
               <input className="ainput" placeholder="100g" value={v.w}
                      onChange={(e) => setVariant(i, "w", e.target.value)} />
-              <input className="ainput" placeholder="₹0.00" value={v.price}
-                     onChange={(e) => setVariant(i, "price", e.target.value)} />
-              <input className="ainput" placeholder="0" value={v.stock}
-                     onChange={(e) => setVariant(i, "stock", e.target.value.replace(/\D/g, ""))} />
+              <div>
+                <input className="ainput" placeholder="₹0.00" value={v.price}
+                       onChange={(e) => setVariant(i, "price", e.target.value)} />
+                {v.manual && auto != null ? (
+                  <span className="afield-hint">manual · <button type="button" className="alink alink-tiny" onClick={() => revertAuto(i)}>auto ₹{auto}</button></span>
+                ) : auto != null ? (
+                  <span className="afield-hint">auto from base</span>
+                ) : null}
+              </div>
+              <input className="ainput" placeholder="₹0.00" value={v.disc || ""}
+                     onChange={(e) => setVariant(i, "disc", e.target.value)} />
               <button type="button" className="x" aria-label="Remove variant" onClick={() => removeVariant(i)}>
                 <AIcon name="close" size={14} />
               </button>
             </div>
-          ))}
+          );})}
           <button type="button" className="alink" onClick={addVariant}>+ Add Another Variant</button>
         </div>
       </div>
@@ -415,8 +490,6 @@ function ProductDetailPage({ product, onBack }) {
                 <th>Weight</th>
                 <th className="num">Regular Price</th>
                 <th className="num">Discounted Price</th>
-                <th className="num">Stock Qty</th>
-                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -425,10 +498,6 @@ function ProductDetailPage({ product, onBack }) {
                   <td><b>{v.w}</b></td>
                   <td className="num">{afmt(v.price)}</td>
                   <td className="num text-red">{v.disc ? afmt(v.disc) : "—"}</td>
-                  <td className="num">{v.stock}</td>
-                  <td>
-                    <span className={`apill ${v.status === "Low" ? "apill--warn" : "apill--success"}`}>{v.status}</span>
-                  </td>
                 </tr>
               ))}
             </tbody>

@@ -296,6 +296,7 @@
 .afield { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
 .afield-row { display: grid; gap: 18px; }
 .afield-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.afield-row.cols-3 { grid-template-columns: 0.8fr 1fr 1fr; }
 .afield-label {
   font-size: 13px;
   font-weight: 500;
@@ -700,7 +701,14 @@
   align-items: center;
   margin-bottom: 10px;
 }
-.avariant-row .ainput { padding: 10px 12px; }
+.avariant-row .ainput { padding: 10px 12px; width: 100%; }
+.avariant-row.avariant-head {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ac-muted);
+}
+.alink-tiny { font-size: 12px; padding: 0; vertical-align: baseline; }
 .avariant-row .x {
   background: transparent;
   border: none;
@@ -1214,6 +1222,7 @@
   .adm-header { padding: 0 16px; }
   .adm-header h1 { font-size: 20px; }
   .afield-row.cols-2 { grid-template-columns: 1fr; }
+  .afield-row.cols-3 { grid-template-columns: 1fr; }
   .adm-stats { grid-template-columns: 1fr; }
   .adm-card { padding: 22px 18px; }
   .adm-filters { grid-template-columns: 1fr; }

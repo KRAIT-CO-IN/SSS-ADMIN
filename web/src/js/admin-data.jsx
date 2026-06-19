@@ -16,6 +16,7 @@ function adaptAdminProduct(p) {
     price: p.price,
     disc: p.disc,
     discountLabel: p.discountLabel || "",
+    baseWeight: p.baseWeight || "100g",
     stock: p.stock,
     lowAlert: p.lowAlert,
     status: p.status,

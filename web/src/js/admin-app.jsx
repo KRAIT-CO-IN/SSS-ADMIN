@@ -140,7 +140,8 @@ function AdminApp() {
         name: form.name, shortDesc: form.shortDesc, fullDesc: form.fullDesc,
         category: form.category, catId: form.catId, img: form.img,
         price: +form.price || 0, disc: form.disc ? +form.disc : null,
-        discountLabel: form.discountLabel, stock: +form.stock || 0,
+        discountLabel: form.discountLabel, baseWeight: form.baseWeight || "100g",
+        stock: +form.stock || 0,
         lowAlert: +form.lowAlert || 10, status: form.status,
         visible: form.visible, tags: form.tags, variants: form.variants,
       };
