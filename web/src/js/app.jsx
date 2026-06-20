@@ -92,7 +92,7 @@ function App() {
   const FREE_AT = +shipping.free || 499;
   const RATE = +shipping.rate || 80;
   const shippingFee = subtotal >= FREE_AT ? 0 : RATE;
-  const gst = Math.round(subtotal * 0.05);
+  const gst = 0;
 
   return (
     <React.Fragment>

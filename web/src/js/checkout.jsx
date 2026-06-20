@@ -67,9 +67,7 @@ function CheckoutPage({ cart, onNav, onProceed }) {
   const FREE_AT = +shipping.free || 499;
   const RATE = +shipping.rate || 80;
   const SHIPPING = cart.subtotal >= FREE_AT ? 0 : RATE;
-  const TAX_RATE = 0.05;
-  const tax = Math.round(cart.subtotal * TAX_RATE);
-  const total = cart.subtotal + SHIPPING + tax;
+  const total = cart.subtotal + SHIPPING;
 
   return (
     <main className="container" data-screen-label="05 Checkout">
@@ -196,7 +194,6 @@ function CheckoutPage({ cart, onNav, onProceed }) {
             <div className="sum-totals">
               <div className="sum-row"><span>Subtotal</span><span>{fmt(cart.subtotal)}</span></div>
               <div className="sum-row"><span>Shipping <span style={{ color: "var(--c-muted)", fontSize: 12 }}>(Standard Express)</span></span><span>{fmt(SHIPPING)}</span></div>
-              <div className="sum-row"><span>Taxes</span><span>{fmt(tax)}</span></div>
               <div className="sum-row total"><span>Total</span><b>{fmt(total)}</b></div>
             </div>
 
